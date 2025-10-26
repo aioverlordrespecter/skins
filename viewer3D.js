@@ -428,15 +428,19 @@ export class Viewer3D {
                     }
                 }
                 
+                // Clone material for this part so each part has independent material
+                const uniqueMaterial = child.material.clone();
+                child.material = uniqueMaterial; // Apply cloned material to mesh
+                
                 this.modelParts.push({
                     name: child.name || 'Unnamed Part',
                     mesh: child,
-                    originalMaterial: child.material.clone(),
-                    currentMaterial: child.material, // Track current material
+                    originalMaterial: uniqueMaterial.clone(), // Store another clone as backup
+                    currentMaterial: uniqueMaterial, // Track current material (same reference as mesh)
                     uvs: uvs,
                     geometry: child.geometry
                 });
-                console.log(`Found part: ${child.name} (${uvs.length} UV coords)`);
+                console.log(`Found part: ${child.name} (${uvs.length} UV coords) - Unique material assigned`);
             }
         });
 

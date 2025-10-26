@@ -18,6 +18,8 @@ class CSGOSkinEditor {
         this.maskDrawingMode = false;
         this.selectionMode = 'island'; // 'face' or 'island'
         this.selectedPart = null; // For FBX workflow
+        this.partTextures = {}; // Store separate canvas/texture for each FBX part
+        this.currentPartCanvas = null; // Current part's dedicated canvas
 
         this.init();
     }
@@ -290,8 +292,20 @@ class CSGOSkinEditor {
     }
 
     selectFBXPart(part) {
+        // Save current part's canvas state before switching
+        if (this.selectedPart && this.uvEditor.canvas) {
+            console.log(`💾 Saving canvas state for: ${this.selectedPart.name}`);
+            this.partTextures[this.selectedPart.name] = this.uvEditor.canvas.toJSON();
+        }
+        
         this.selectedPart = part;
-        this.showNotification(`✅ Selected: ${part.name}`, 'success');
+        
+        const isNewCanvas = !this.partTextures[part.name];
+        if (isNewCanvas) {
+            this.showNotification(`✅ Selected: ${part.name} (New Canvas)`, 'success');
+        } else {
+            this.showNotification(`✅ Selected: ${part.name} (Loading Saved Work)`, 'success');
+        }
         
         // Show part info in toolbar
         const selectedPartInfo = document.getElementById('selectedPartInfo');
@@ -303,6 +317,11 @@ class CSGOSkinEditor {
         clearBtn.style.display = 'inline-block';
         
         clearBtn.onclick = () => {
+            // Save current state before clearing
+            if (this.selectedPart && this.uvEditor.canvas) {
+                this.partTextures[this.selectedPart.name] = this.uvEditor.canvas.toJSON();
+            }
+            
             this.selectedPart = null;
             selectedPartInfo.style.display = 'none';
             if (this.uvEditor && this.uvEditor.canvas) {
@@ -311,8 +330,20 @@ class CSGOSkinEditor {
             this.showNotification('Part selection cleared', 'info');
         };
         
-        // Show UV layout for this part
-        this.showPartUVLayout(part);
+        // Clear canvas and load this part's saved state (if any)
+        this.uvEditor.canvas.clear();
+        this.uvEditor.canvas.backgroundColor = '#1a1a1a';
+        
+        if (this.partTextures[part.name]) {
+            console.log(`📂 Loading saved canvas state for: ${part.name}`);
+            this.uvEditor.canvas.loadFromJSON(this.partTextures[part.name], () => {
+                this.showPartUVLayout(part);
+                this.uvEditor.canvas.renderAll();
+            });
+        } else {
+            console.log(`🆕 Creating new canvas for: ${part.name}`);
+            this.showPartUVLayout(part);
+        }
         
         // Enable "Add Image" button
         const addBtn = document.getElementById('addImageBtn');
@@ -580,10 +611,14 @@ class CSGOSkinEditor {
                 transition: all 0.2s;
             `;
             
+            // Check if this part has a saved texture
+            const hasTexture = this.partTextures[part.name];
+            const textureIndicator = hasTexture ? '🎨 ' : '';
+            
             partBtn.innerHTML = `
-                <div style="font-weight: bold; color: #4CAF50;">${part.name}</div>
+                <div style="font-weight: bold; color: #4CAF50;">${textureIndicator}${part.name}</div>
                 <div style="font-size: 11px; color: #888; margin-top: 4px;">
-                    ${part.uvs.length} UV coords
+                    ${part.uvs.length} UV coords${hasTexture ? ' • Textured' : ''}
                 </div>
             `;
             
@@ -900,7 +935,16 @@ class CSGOSkinEditor {
     }
     
     applyTextureToFBXPart() {
-        if (!this.selectedPart) return;
+        if (!this.selectedPart) {
+            console.warn('⚠️ No part selected, skipping texture application');
+            return;
+        }
+        
+        console.log(`🎨 Applying texture to: ${this.selectedPart.name}`);
+        console.log(`   Current mesh material ID: ${this.selectedPart.mesh.material.id}`);
+        
+        // Save the canvas state for this part
+        this.partTextures[this.selectedPart.name] = this.uvEditor.canvas.toJSON();
         
         // Export current UV editor canvas as texture
         const textureDataUrl = this.uvEditor.exportTexture();
@@ -908,19 +952,33 @@ class CSGOSkinEditor {
         // Create texture from canvas
         const loader = new THREE.TextureLoader();
         const texture = loader.load(textureDataUrl, () => {
-            // Apply to selected part only
-            const material = new THREE.MeshStandardMaterial({
+            // Create a NEW material specifically for this part
+            const newMaterial = new THREE.MeshStandardMaterial({
                 map: texture,
                 metalness: 0.3,
                 roughness: 0.7,
                 side: THREE.DoubleSide
             });
             
-            this.selectedPart.mesh.material = material;
-            this.selectedPart.currentMaterial = material; // Update current material tracker
+            console.log(`   New material created: ID ${newMaterial.id}`);
+            console.log(`   Assigning to mesh: ${this.selectedPart.mesh.name}`);
+            
+            // Apply to selected part only
+            this.selectedPart.mesh.material = newMaterial;
+            this.selectedPart.currentMaterial = newMaterial; // Update current material tracker
             this.selectedPart.mesh.userData.isHighlighted = false; // Clear any highlight flag
             
-            console.log(`✅ Texture applied to ${this.selectedPart.name}`);
+            // Verify no other parts share this material
+            const otherPartsWithSameMaterial = this.viewer3D.modelParts.filter(p => 
+                p !== this.selectedPart && p.mesh.material.id === newMaterial.id
+            );
+            
+            if (otherPartsWithSameMaterial.length > 0) {
+                console.error('❌ ERROR: Other parts sharing the same material!', 
+                    otherPartsWithSameMaterial.map(p => p.name));
+            } else {
+                console.log(`✅ Texture applied ONLY to ${this.selectedPart.name} (verified unique)`);
+            }
         });
     }
 
