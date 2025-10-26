@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS:GO Skin Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Fabric.js for 2D canvas manipulation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Toolbar -->
+        <header class="toolbar">
+            <h1>CS:GO Skin Editor</h1>
+            <div class="toolbar-controls">
+                <div class="workflow-section">
+                    <span class="section-label">Step 1: Start</span>
+                    <button id="loadBaseTextureBtn" class="btn btn-primary">📄 Load UV Sheet (.tga)</button>
+                    <span class="hint-text">OR</span>
+                    <button id="loadModelBtn" class="btn">🎮 Load Model (.obj/.fbx)</button>
+                </div>
+                <div class="workflow-section" id="maskToolsSection" style="display: none;">
+                    <span class="section-label">Step 2: Create Masks</span>
+                    <button id="createMaskBtn" class="btn btn-special">🎨 Draw Mask</button>
+                    <button id="saveMaskBtn" class="btn" disabled>💾 Save Mask</button>
+                    <button id="loadMaskBtn" class="btn">📂 Load Mask</button>
+                </div>
+                <div class="workflow-section" id="textureToolsSection" style="display: none;">
+                    <span class="section-label">Step 3: Add Textures</span>
+                    <button id="addImageBtn" class="btn">➕ Add Image</button>
+                    <button id="exportTextureBtn" class="btn btn-success">💾 Export</button>
+                </div>
+                <div class="workflow-section" id="modelToolsSection" style="display: none;">
+                    <span class="section-label">3D Preview</span>
+                    <button id="interactiveModeBtn" class="btn" disabled>🎨 Interactive Mode</button>
+                    <button id="screenshotBtn" class="btn">📷 Screenshot</button>
+                </div>
+                <div class="workflow-section" id="selectedPartInfo" style="display: none;">
+                    <span class="section-label">Selected:</span>
+                    <span id="selectedPartName" style="color: #4CAF50; font-weight: bold;">None</span>
+                    <button id="clearPartSelectionBtn" class="btn btn-small" style="display: none;">Clear</button>
+                </div>
+                <div class="workflow-section" style="margin-left: auto;">
+                    <span class="section-label">Layers:</span>
+                    <div id="layerList" style="display: inline-block; max-height: 40px; overflow-x: auto; white-space: nowrap;">
+                        <span style="color: #666; font-size: 12px;">None</span>
+                    </div>
+                    <button id="deleteLayerBtn" class="btn btn-small" disabled>🗑️</button>
+                </div>
+                <div class="workflow-section">
+                    <label style="font-size: 12px;">Opacity:</label>
+                    <input type="range" id="opacitySlider" min="0" max="100" value="100" style="width: 80px; vertical-align: middle;">
+                    <span id="opacityValue" style="font-size: 12px;">100%</span>
+                </div>
+            </div>
+            <input type="file" id="modelInput" accept=".obj,.fbx" style="display: none;">
+            <input type="file" id="baseTextureInput" accept="image/*,.tga" style="display: none;">
+            <input type="file" id="maskInput" accept="image/*,.tga" style="display: none;">
+            <input type="file" id="imageInput" accept="image/*,.tga" style="display: none;">
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- UV Editor Panel -->
+            <div class="panel uv-editor-panel">
+                <div class="panel-header">
+                    <h2>UV Texture Editor</h2>
+                    <span class="hint">Add images and position them on the texture</span>
+                    <button id="fullscreenUVBtn" class="btn btn-small" style="margin-left: auto;">⛶ Fullscreen</button>
+                </div>
+                <div class="canvas-container" style="flex: 1; min-height: 0;">
+                    <canvas id="uvCanvas"></canvas>
+                </div>
+                
+                <!-- Compact bottom toolbar -->
+                <div class="bottom-toolbar" style="display: flex; gap: 10px; padding: 10px; background: #2a2a2a; border-top: 1px solid #3a3a3a; flex-wrap: wrap; align-items: center;">
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <label style="font-size: 12px; color: #888;">Opacity:</label>
+                        <input type="range" id="opacitySlider" min="0" max="100" value="100" style="width: 80px;">
+                        <span id="opacityValue" style="font-size: 12px; color: #888;">100%</span>
+                    </div>
+                    <button id="deleteLayerBtn" class="btn btn-small" disabled>Delete Layer</button>
+                    <button id="moveUpBtn" class="btn btn-small" disabled>↑</button>
+                    <button id="moveDownBtn" class="btn btn-small" disabled>↓</button>
+                </div>
+                
+                <!-- Compact layers list on the side -->
+                <div style="width: 200px; background: #1e1e1e; border-left: 1px solid #3a3a3a; display: flex; flex-direction: column; overflow: hidden;">
+                    <div style="padding: 10px; background: #2a2a2a; border-bottom: 1px solid #3a3a3a;">
+                        <h3 style="margin: 0; font-size: 14px;">Layers</h3>
+                    </div>
+                    <div id="layerList" class="layer-list" style="flex: 1; overflow-y: auto; padding: 5px;">
+                        <div class="empty-state" style="padding: 20px; text-align: center; color: #666; font-size: 12px;">No layers</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hidden elements for compatibility -->
+            <div id="componentSelector" style="display:none;"></div>
+            <div id="interactiveControls" style="display:none;"></div>
+            <button id="clearMaskBtn" style="display:none;"></button>
+            <button id="showUVMapBtn" style="display:none;"></button>
+            <button id="moveUpBtn" style="display:none;"></button>
+            <button id="moveDownBtn" style="display:none;"></button>
+            <div id="maskDrawingTools" style="display:none;"></div>
+            <div id="modelName" style="display:none;">None</div>
+            <div id="polyCount" style="display:none;">0</div>
+
+            <!-- RIGHT: 3D Viewer (Clean, Full) -->
+            <div class="panel viewer-panel" id="viewer3DPanel" style="display: flex; flex: 1; background: #1a1a1a;">
+                <div class="viewer-container" style="flex: 1;">
+                    <canvas id="viewer3D"></canvas>
+                    <div id="viewerPlaceholder" class="placeholder">
+                        <div class="placeholder-content">
+                            <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                                <path d="M2 17L12 22L22 17"/>
+                                <path d="M2 12L12 17L22 12"/>
+                            </svg>
+                            <p>Load a 3D model to preview your skin</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('loadModelBtn').click()">Load Model</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js imports (using importmap for modules) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <!-- Application Scripts -->
+    <script type="module" src="uvEditor.js"></script>
+    <script type="module" src="viewer3D.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
+
