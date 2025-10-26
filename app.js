@@ -488,8 +488,11 @@ class CSGOSkinEditor {
         
         console.log('   Created', lines.length, 'UV wireframe lines');
         
-        // Calculate bounding box of UV wireframe
-        let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
+        // Calculate bounding box of UV wireframe in canvas pixels
+        minU = Infinity; 
+        minV = Infinity; 
+        maxU = -Infinity; 
+        maxV = -Infinity;
         for (let i = 0; i < index.count; i += 3) {
             const i1 = index.getX(i);
             const i2 = index.getX(i + 1);

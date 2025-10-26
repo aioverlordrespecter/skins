@@ -498,16 +498,7 @@ export class Viewer3D {
         console.log(`   Scaled size:`, (size.x * scale).toFixed(1), 'x', (size.y * scale).toFixed(1), 'x', (size.z * scale).toFixed(1));
         console.log(`   Camera distance:`, optimalDistance.toFixed(1));
         
-        // Log material info for debugging
-        object.traverse((child) => {
-            if (child.isMesh) {
-                console.log(`   Part "${child.name}":`, {
-                    material: child.material.type,
-                    color: child.material.color,
-                    visible: child.visible
-                });
-            }
-        });
+        // Material info logged during part extraction above
 
         // Get polygon count
         let polyCount = 0;
