@@ -10,7 +10,6 @@
 
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import { fabric } from 'fabric';
 
 class SimpleFBXSkinEditor {
     constructor() {
@@ -22,7 +21,19 @@ class SimpleFBXSkinEditor {
         this.uvCanvas = null;
         this.fabricCanvas = null;
 
-        this.init();
+        // Wait for fabric.js to load
+        if (typeof window.fabric !== 'undefined') {
+            this.init();
+        } else {
+            // Wait for fabric to load
+            window.addEventListener('load', () => {
+                if (typeof window.fabric !== 'undefined') {
+                    this.init();
+                } else {
+                    console.error('Fabric.js failed to load');
+                }
+            });
+        }
     }
 
     init() {
@@ -86,13 +97,19 @@ class SimpleFBXSkinEditor {
             return;
         }
 
+        // Check if fabric.js is loaded
+        if (typeof window.fabric === 'undefined') {
+            console.error('Fabric.js not loaded');
+            return;
+        }
+
         // Set canvas size to match container
         const container = uvCanvas.parentElement;
         const width = container.clientWidth;
         const height = container.clientHeight;
 
         // Create fabric canvas
-        this.fabricCanvas = new fabric.Canvas('uvCanvas', {
+        this.fabricCanvas = new window.fabric.Canvas('uvCanvas', {
             width: width,
             height: height,
             backgroundColor: '#1a1a1a'
@@ -392,19 +409,19 @@ class SimpleFBXSkinEditor {
 
             // Create triangle lines
             lines.push(
-                new fabric.Line([x1, y1, x2, y2], {
+                new window.fabric.Line([x1, y1, x2, y2], {
                     stroke: '#00ffff',
                     strokeWidth: 1,
                     selectable: false,
                     evented: false
                 }),
-                new fabric.Line([x2, y2, x3, y3], {
+                new window.fabric.Line([x2, y2, x3, y3], {
                     stroke: '#00ffff',
                     strokeWidth: 1,
                     selectable: false,
                     evented: false
                 }),
-                new fabric.Line([x3, y3, x1, y1], {
+                new window.fabric.Line([x3, y3, x1, y1], {
                     stroke: '#00ffff',
                     strokeWidth: 1,
                     selectable: false,
@@ -430,7 +447,7 @@ class SimpleFBXSkinEditor {
                 maxY = Math.max(maxY, v.y);
             });
 
-            const bbox = new fabric.Rect({
+            const bbox = new window.fabric.Rect({
                 left: minX,
                 top: minY,
                 width: maxX - minX,
@@ -461,7 +478,7 @@ class SimpleFBXSkinEditor {
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            fabric.Image.fromURL(e.target.result, (img) => {
+            window.fabric.Image.fromURL(e.target.result, (img) => {
                 // Scale image to fit UV space initially
                 const canvasWidth = this.fabricCanvas.width;
                 const canvasHeight = this.fabricCanvas.height;
