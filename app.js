@@ -405,6 +405,24 @@ class CSGOSkinEditor {
         
         console.log('   UV count:', uvAttribute.count, 'Triangles:', index.count / 3);
         
+        // Analyze UV range to detect issues
+        let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+        for (let i = 0; i < uvAttribute.count; i++) {
+            const u = uvAttribute.getX(i);
+            const v = uvAttribute.getY(i);
+            minU = Math.min(minU, u);
+            maxU = Math.max(maxU, u);
+            minV = Math.min(minV, v);
+            maxV = Math.max(maxV, v);
+        }
+        console.log('   UV Range:');
+        console.log('      U:', minU.toFixed(3), 'to', maxU.toFixed(3), '(width:', (maxU - minU).toFixed(3), ')');
+        console.log('      V:', minV.toFixed(3), 'to', maxV.toFixed(3), '(height:', (maxV - minV).toFixed(3), ')');
+        
+        if (minU < -0.1 || maxU > 1.1 || minV < -0.1 || maxV > 1.1) {
+            console.warn('   ⚠️ UVs outside standard 0-1 range!');
+        }
+        
         // Create lines for UV wireframe
         const lines = [];
         
@@ -942,16 +960,30 @@ class CSGOSkinEditor {
         
         console.log(`🎨 Applying texture to: ${this.selectedPart.name}`);
         console.log(`   Current mesh material ID: ${this.selectedPart.mesh.material.id}`);
+        console.log(`   Canvas dimensions: ${this.uvEditor.canvas.width} x ${this.uvEditor.canvas.height}`);
         
         // Save the canvas state for this part
         this.partTextures[this.selectedPart.name] = this.uvEditor.canvas.toJSON();
         
         // Export current UV editor canvas as texture
         const textureDataUrl = this.uvEditor.exportTexture();
+        console.log(`   Texture data URL length: ${textureDataUrl.length} bytes`);
         
         // Create texture from canvas
         const loader = new THREE.TextureLoader();
         const texture = loader.load(textureDataUrl, () => {
+            // Configure texture settings
+            texture.wrapS = THREE.ClampToEdgeWrapping; // Don't repeat horizontally
+            texture.wrapT = THREE.ClampToEdgeWrapping; // Don't repeat vertically
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            texture.flipY = false; // Don't flip (we handle Y-flip in UV coords)
+            texture.needsUpdate = true;
+            
+            console.log(`   Texture loaded:`, texture.image.width, 'x', texture.image.height);
+            console.log(`   Texture wrap: S=${texture.wrapS}, T=${texture.wrapT}`);
+            console.log(`   Texture flipY:`, texture.flipY);
+            
             // Create a NEW material specifically for this part
             const newMaterial = new THREE.MeshStandardMaterial({
                 map: texture,

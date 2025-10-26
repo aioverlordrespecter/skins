@@ -428,8 +428,14 @@ export class Viewer3D {
                     }
                 }
                 
-                // Clone material for this part so each part has independent material
-                const uniqueMaterial = child.material.clone();
+                // Clone or create material for this part so each part has independent material
+                const baseMaterial = child.material || new THREE.MeshStandardMaterial({
+                    color: 0xcccccc,
+                    metalness: 0.2,
+                    roughness: 0.8,
+                    side: THREE.DoubleSide
+                });
+                const uniqueMaterial = baseMaterial.clone();
                 child.material = uniqueMaterial; // Apply cloned material to mesh
                 
                 this.modelParts.push({
@@ -470,30 +476,27 @@ export class Viewer3D {
         this.modelLoaded = true;
         this.needsRender = true;
         
-        // Apply default materials to all parts
+        // Note: Materials already set during part extraction (lines 431-443)
+        // Just enable shadows
         object.traverse((child) => {
             if (child.isMesh) {
-                child.material = new THREE.MeshStandardMaterial({
-                    color: 0xaaaaaa,
-                    metalness: 0.3,
-                    roughness: 0.7,
-                    side: THREE.DoubleSide
-                });
                 child.castShadow = true;
                 child.receiveShadow = true;
             }
         });
         
+        // Adjust camera to view model properly
+        const optimalDistance = Math.max(size.x, size.y, size.z) * scale * 2;
+        this.camera.position.set(0, optimalDistance * 0.3, optimalDistance);
+        this.camera.lookAt(0, 0, 0);
+        
         console.log(`✅ FBX Model added to scene:`, object);
-        console.log(`   Position:`, object.position.x, object.position.y, object.position.z);
-        console.log(`   Scale:`, object.scale.x, object.scale.y, object.scale.z);
+        console.log(`   Position:`, object.position.x.toFixed(2), object.position.y.toFixed(2), object.position.z.toFixed(2));
+        console.log(`   Scale:`, scale.toFixed(4));
         console.log(`   Parts:`, this.modelParts.length);
-        console.log(`   Bounding box min:`, box.min.x, box.min.y, box.min.z);
-        console.log(`   Bounding box max:`, box.max.x, box.max.y, box.max.z);
-        console.log(`   Model size:`, size.x, size.y, size.z);
-        console.log(`   Max dimension:`, maxDim);
-        console.log(`   Final scale factor:`, scale);
-        console.log(`   Camera position:`, this.camera.position.x, this.camera.position.y, this.camera.position.z);
+        console.log(`   Original size:`, size.x.toFixed(1), 'x', size.y.toFixed(1), 'x', size.z.toFixed(1));
+        console.log(`   Scaled size:`, (size.x * scale).toFixed(1), 'x', (size.y * scale).toFixed(1), 'x', (size.z * scale).toFixed(1));
+        console.log(`   Camera distance:`, optimalDistance.toFixed(1));
         
         // Log material info for debugging
         object.traverse((child) => {
