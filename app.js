@@ -217,6 +217,16 @@ class CSGOSkinEditor {
         document.getElementById('interactiveModeBtn').addEventListener('click', () => {
             this.toggleInteractiveMode();
         });
+        
+        // Parts List Toggle
+        document.getElementById('togglePartsListBtn').addEventListener('click', () => {
+            const modal = document.getElementById('partsListModal');
+            modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        document.getElementById('closePartsListBtn').addEventListener('click', () => {
+            document.getElementById('partsListModal').style.display = 'none';
+        });
 
         // Show UV Map
         document.getElementById('showUVMapBtn').addEventListener('click', () => {
@@ -328,6 +338,9 @@ class CSGOSkinEditor {
         const canvasHeight = this.uvEditor.canvas.height;
         console.log('   Canvas size:', canvasWidth, 'x', canvasHeight);
         
+        // Add coordinate reference grid for debugging
+        this.addDebugGrid(canvasWidth, canvasHeight);
+        
         // Draw UV wireframe directly on Fabric canvas
         const geometry = part.geometry;
         
@@ -364,18 +377,42 @@ class CSGOSkinEditor {
         // Create lines for UV wireframe
         const lines = [];
         
-        // Draw all edges
+        // Draw all edges (log first few for debugging)
         for (let i = 0; i < index.count; i += 3) {
             const i1 = index.getX(i);
             const i2 = index.getX(i + 1);
             const i3 = index.getX(i + 2);
             
-            const u1 = uvAttribute.getX(i1) * canvasWidth;
-            const v1 = (1 - uvAttribute.getY(i1)) * canvasHeight;
-            const u2 = uvAttribute.getX(i2) * canvasWidth;
-            const v2 = (1 - uvAttribute.getY(i2)) * canvasHeight;
-            const u3 = uvAttribute.getX(i3) * canvasWidth;
-            const v3 = (1 - uvAttribute.getY(i3)) * canvasHeight;
+            // Get raw UV coordinates (0-1 range)
+            const u1_raw = uvAttribute.getX(i1);
+            const v1_raw = uvAttribute.getY(i1);
+            const u2_raw = uvAttribute.getX(i2);
+            const v2_raw = uvAttribute.getY(i2);
+            const u3_raw = uvAttribute.getX(i3);
+            const v3_raw = uvAttribute.getY(i3);
+            
+            // Debug log first triangle
+            if (i === 0) {
+                console.log('   First triangle UVs (raw 0-1):');
+                console.log('      v1:', u1_raw.toFixed(3), v1_raw.toFixed(3));
+                console.log('      v2:', u2_raw.toFixed(3), v2_raw.toFixed(3));
+                console.log('      v3:', u3_raw.toFixed(3), v3_raw.toFixed(3));
+            }
+            
+            // Convert to canvas coordinates (flip Y because UV space has origin at bottom-left)
+            const u1 = u1_raw * canvasWidth;
+            const v1 = (1 - v1_raw) * canvasHeight;
+            const u2 = u2_raw * canvasWidth;
+            const v2 = (1 - v2_raw) * canvasHeight;
+            const u3 = u3_raw * canvasWidth;
+            const v3 = (1 - v3_raw) * canvasHeight;
+            
+            if (i === 0) {
+                console.log('   First triangle canvas coords:');
+                console.log('      v1:', u1.toFixed(1), v1.toFixed(1));
+                console.log('      v2:', u2.toFixed(1), v2.toFixed(1));
+                console.log('      v3:', u3.toFixed(1), v3.toFixed(1));
+            }
             
             // Create three lines for the triangle
             lines.push(
@@ -402,6 +439,41 @@ class CSGOSkinEditor {
         
         console.log('   Created', lines.length, 'UV wireframe lines');
         
+        // Calculate bounding box of UV wireframe
+        let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
+        for (let i = 0; i < index.count; i += 3) {
+            const i1 = index.getX(i);
+            const i2 = index.getX(i + 1);
+            const i3 = index.getX(i + 2);
+            
+            [i1, i2, i3].forEach(idx => {
+                const u = uvAttribute.getX(idx) * canvasWidth;
+                const v = (1 - uvAttribute.getY(idx)) * canvasHeight;
+                minU = Math.min(minU, u);
+                minV = Math.min(minV, v);
+                maxU = Math.max(maxU, u);
+                maxV = Math.max(maxV, v);
+            });
+        }
+        
+        // Add bounding box rectangle to show UV extent
+        const bbox = new fabric.Rect({
+            left: minU,
+            top: minV,
+            width: maxU - minU,
+            height: maxV - minV,
+            fill: 'transparent',
+            stroke: '#ffff00', // Yellow
+            strokeWidth: 2,
+            strokeDashArray: [5, 5],
+            selectable: false,
+            evented: false
+        });
+        this.uvEditor.canvas.add(bbox);
+        
+        console.log(`   UV Bounding Box: (${minU.toFixed(1)}, ${minV.toFixed(1)}) to (${maxU.toFixed(1)}, ${maxV.toFixed(1)})`);
+        console.log(`   Size: ${(maxU - minU).toFixed(1)} x ${(maxV - minV).toFixed(1)} px`);
+        
         // Add all lines to canvas
         lines.forEach(line => {
             this.uvEditor.canvas.add(line);
@@ -411,6 +483,140 @@ class CSGOSkinEditor {
         this.uvEditor.canvas.renderAll();
         
         console.log(`✅ UV layout displayed for ${part.name}`);
+        
+        // Add corner markers to show UV space boundaries
+        this.addUVCornerMarkers(canvasWidth, canvasHeight);
+    }
+    
+    addDebugGrid(width, height) {
+        // Add a subtle grid to show UV space (0,0) to (1,1)
+        const gridSize = Math.min(width, height) / 4;
+        
+        for (let i = 0; i <= 4; i++) {
+            // Vertical lines
+            const vLine = new fabric.Line([i * gridSize, 0, i * gridSize, height], {
+                stroke: '#333333',
+                strokeWidth: 1,
+                selectable: false,
+                evented: false
+            });
+            this.uvEditor.canvas.add(vLine);
+            this.uvEditor.canvas.sendToBack(vLine);
+            
+            // Horizontal lines
+            const hLine = new fabric.Line([0, i * gridSize, width, i * gridSize], {
+                stroke: '#333333',
+                strokeWidth: 1,
+                selectable: false,
+                evented: false
+            });
+            this.uvEditor.canvas.add(hLine);
+            this.uvEditor.canvas.sendToBack(hLine);
+        }
+        
+        console.log('   Added debug grid');
+    }
+    
+    addUVCornerMarkers(width, height) {
+        // Add corner markers to show UV coordinate system
+        const corners = [
+            { x: 0, y: 0, label: '(0,0)' },
+            { x: width, y: 0, label: '(1,0)' },
+            { x: 0, y: height, label: '(0,1)' },
+            { x: width, y: height, label: '(1,1)' }
+        ];
+        
+        corners.forEach(corner => {
+            const circle = new fabric.Circle({
+                left: corner.x - 5,
+                top: corner.y - 5,
+                radius: 5,
+                fill: '#ff00ff',
+                selectable: false,
+                evented: false
+            });
+            
+            const text = new fabric.Text(corner.label, {
+                left: corner.x + 10,
+                top: corner.y - 10,
+                fontSize: 12,
+                fill: '#ff00ff',
+                selectable: false,
+                evented: false
+            });
+            
+            this.uvEditor.canvas.add(circle);
+            this.uvEditor.canvas.add(text);
+        });
+        
+        console.log('   Added UV corner markers (magenta)');
+    }
+    
+    populatePartsList() {
+        const container = document.getElementById('partsListContainer');
+        container.innerHTML = '';
+        
+        const parts = this.viewer3D.modelParts;
+        
+        if (!parts || parts.length === 0) {
+            container.innerHTML = '<div style="color: #888; font-size: 12px; padding: 10px;">No parts found</div>';
+            return;
+        }
+        
+        console.log(`🔧 Populating parts list with ${parts.length} parts`);
+        
+        parts.forEach((part, index) => {
+            const partBtn = document.createElement('button');
+            partBtn.style.cssText = `
+                width: 100%;
+                padding: 10px;
+                background: #1e1e1e;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                color: #fff;
+                text-align: left;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.2s;
+            `;
+            
+            partBtn.innerHTML = `
+                <div style="font-weight: bold; color: #4CAF50;">${part.name}</div>
+                <div style="font-size: 11px; color: #888; margin-top: 4px;">
+                    ${part.uvs.length} UV coords
+                </div>
+            `;
+            
+            // Hover effect
+            partBtn.onmouseenter = () => {
+                partBtn.style.background = '#2a2a2a';
+                partBtn.style.borderColor = '#4CAF50';
+            };
+            partBtn.onmouseleave = () => {
+                if (this.selectedPart !== part) {
+                    partBtn.style.background = '#1e1e1e';
+                    partBtn.style.borderColor = '#3a3a3a';
+                }
+            };
+            
+            // Click to select part
+            partBtn.onclick = () => {
+                this.selectFBXPart(part);
+                
+                // Update all buttons to show selection
+                Array.from(container.children).forEach(btn => {
+                    btn.style.background = '#1e1e1e';
+                    btn.style.borderColor = '#3a3a3a';
+                });
+                partBtn.style.background = '#2a2a2a';
+                partBtn.style.borderColor = '#4CAF50';
+                
+                // Close modal after selection
+                document.getElementById('partsListModal').style.display = 'none';
+            };
+            
+            container.appendChild(partBtn);
+        });
     }
 
     async loadModel(file) {
@@ -495,6 +701,12 @@ class CSGOSkinEditor {
                 document.getElementById('interactiveModeBtn').disabled = false;
                 document.getElementById('textureToolsSection').style.display = 'flex';
                 document.getElementById('modelToolsSection').style.display = 'flex';
+                
+                // Show Parts Explorer section
+                document.getElementById('partsExplorerSection').style.display = 'flex';
+                
+                // Populate parts list
+                this.populatePartsList();
                 
                 // Initially disable Add Image button until part is selected
                 const addBtn = document.getElementById('addImageBtn');
@@ -672,7 +884,7 @@ class CSGOSkinEditor {
         try {
             const layer = await this.uvEditor.addImageLayer(file);
             this.updateLayerList();
-            this.showNotification(`Added layer: ${file.name}`, 'success');
+            this.showNotification(`✅ ${file.name} added - Position it over the CYAN wireframe`, 'success');
             
             // If FBX part is selected, apply texture to that part only
             if (this.selectedPart) {

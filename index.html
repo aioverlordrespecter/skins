@@ -41,6 +41,10 @@
                     <span id="selectedPartName" style="color: #4CAF50; font-weight: bold;">None</span>
                     <button id="clearPartSelectionBtn" class="btn btn-small" style="display: none;">Clear</button>
                 </div>
+                <div class="workflow-section" id="partsExplorerSection" style="display: none;">
+                    <span class="section-label">Parts List:</span>
+                    <button id="togglePartsListBtn" class="btn btn-small">📋 Show All Parts</button>
+                </div>
                 <div class="workflow-section" style="margin-left: auto;">
                     <span class="section-label">Layers:</span>
                     <div id="layerList" style="display: inline-block; max-height: 40px; overflow-x: auto; white-space: nowrap;">
@@ -124,6 +128,18 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Parts Explorer Modal -->
+    <div id="partsListModal" style="display: none; position: fixed; top: 60px; right: 20px; background: #2a2a2a; border: 2px solid #4CAF50; border-radius: 8px; padding: 20px; max-height: 80vh; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.5); width: 300px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #4CAF50;">🔧 FBX Parts</h3>
+            <button id="closePartsListBtn" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+        </div>
+        <div style="color: #888; font-size: 12px; margin-bottom: 10px;">Click any part to select it and view its UV layout</div>
+        <div id="partsListContainer" style="display: flex; flex-direction: column; gap: 5px;">
+            <!-- Parts will be populated here -->
         </div>
     </div>
 

@@ -423,7 +423,7 @@ export class Viewer3D {
                     for (let i = 0; i < uvAttribute.count; i++) {
                         uvs.push({
                             u: uvAttribute.getX(i),
-                            v: 1 - uvAttribute.getY(i) // Flip V for standard UV space
+                            v: uvAttribute.getY(i) // Store raw UV (flipping happens in canvas drawing)
                         });
                     }
                 }
