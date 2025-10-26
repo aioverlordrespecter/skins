@@ -15,47 +15,20 @@
             <h1>CS:GO Skin Editor</h1>
             <div class="toolbar-controls">
                 <div class="workflow-section">
-                    <span class="section-label">Step 1: Start</span>
-                    <button id="loadBaseTextureBtn" class="btn btn-primary">📄 Load UV Sheet (.tga)</button>
-                    <span class="hint-text">OR</span>
-                    <button id="loadModelBtn" class="btn">🎮 Load Model (.obj/.fbx)</button>
+                    <span class="section-label">Load Model:</span>
+                    <button id="loadModelBtn" class="btn btn-primary">🎮 Load FBX Model</button>
                 </div>
-                <div class="workflow-section" id="maskToolsSection" style="display: none;">
-                    <span class="section-label">Step 2: Create Masks</span>
-                    <button id="createMaskBtn" class="btn btn-special">🎨 Draw Mask</button>
-                    <button id="saveMaskBtn" class="btn" disabled>💾 Save Mask</button>
-                    <button id="loadMaskBtn" class="btn">📂 Load Mask</button>
-                </div>
-                <div class="workflow-section" id="textureToolsSection" style="display: none;">
-                    <span class="section-label">Step 3: Add Textures</span>
+                <div class="workflow-section" id="textureSection" style="display: none;">
+                    <span class="section-label">Add Texture:</span>
                     <button id="addImageBtn" class="btn">➕ Add Image</button>
-                    <button id="exportTextureBtn" class="btn btn-success">💾 Export</button>
                 </div>
-                <div class="workflow-section" id="modelToolsSection" style="display: none;">
-                    <span class="section-label">3D Preview</span>
-                    <button id="interactiveModeBtn" class="btn" disabled>🎨 Interactive Mode</button>
-                    <button id="screenshotBtn" class="btn">📷 Screenshot</button>
-                </div>
-                <div class="workflow-section" id="selectedPartInfo" style="display: none;">
-                    <span class="section-label">Selected:</span>
+                <div class="workflow-section" id="selectedPartInfo">
+                    <span class="section-label">Selected Part:</span>
                     <span id="selectedPartName" style="color: #4CAF50; font-weight: bold;">None</span>
-                    <button id="clearPartSelectionBtn" class="btn btn-small" style="display: none;">Clear</button>
-                </div>
-                <div class="workflow-section" id="partsExplorerSection" style="display: none;">
-                    <span class="section-label">Parts List:</span>
-                    <button id="togglePartsListBtn" class="btn btn-small">📋 Show All Parts</button>
                 </div>
                 <div class="workflow-section" style="margin-left: auto;">
-                    <span class="section-label">Layers:</span>
-                    <div id="layerList" style="display: inline-block; max-height: 40px; overflow-x: auto; white-space: nowrap;">
-                        <span style="color: #666; font-size: 12px;">None</span>
-                    </div>
-                    <button id="deleteLayerBtn" class="btn btn-small" disabled>🗑️</button>
-                </div>
-                <div class="workflow-section">
-                    <label style="font-size: 12px;">Opacity:</label>
-                    <input type="range" id="opacitySlider" min="0" max="100" value="100" style="width: 80px; vertical-align: middle;">
-                    <span id="opacityValue" style="font-size: 12px;">100%</span>
+                    <span class="section-label">Parts:</span>
+                    <button id="togglePartsListBtn" class="btn btn-small">📋 Show List</button>
                 </div>
             </div>
             <input type="file" id="modelInput" accept=".obj,.fbx" style="display: none;">
@@ -131,15 +104,18 @@
         </div>
     </div>
 
-    <!-- Parts Explorer Modal -->
+    <!-- Parts List Modal -->
     <div id="partsListModal" style="display: none; position: fixed; top: 60px; right: 20px; background: #2a2a2a; border: 2px solid #4CAF50; border-radius: 8px; padding: 20px; max-height: 80vh; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.5); width: 300px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="margin: 0; color: #4CAF50;">🔧 FBX Parts</h3>
+            <h3 style="margin: 0; color: #4CAF50;">🔧 Gun Parts</h3>
             <button id="closePartsListBtn" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
         </div>
-        <div style="color: #888; font-size: 12px; margin-bottom: 10px;">Click any part to select it and view its UV layout</div>
+        <div style="color: #888; font-size: 12px; margin-bottom: 10px;">Click any part to select it for texturing</div>
         <div id="partsListContainer" style="display: flex; flex-direction: column; gap: 5px;">
             <!-- Parts will be populated here -->
+            <div id="noPartsMessage" style="color: #666; text-align: center; padding: 20px; font-style: italic;">
+                Load an FBX model first
+            </div>
         </div>
     </div>
 
@@ -154,9 +130,7 @@
     </script>
 
     <!-- Application Scripts -->
-    <script type="module" src="uvEditor.js"></script>
-    <script type="module" src="viewer3D.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="skin_editor_simple.js"></script>
 </body>
 </html>
 
